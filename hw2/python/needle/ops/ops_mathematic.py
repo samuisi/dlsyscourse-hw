@@ -241,7 +241,10 @@ class Summation(TensorOp):
           axes = (self.axes,)
         else:
           axes = self.axes
-        
+
+        # normalize negative axes to positive
+        axes = tuple(a if a >= 0 else len(input_shape) + a for a in axes)
+
         new_shape = list(out_grad.shape)
         for axis in sorted(axes):
           new_shape.insert(axis, 1)
