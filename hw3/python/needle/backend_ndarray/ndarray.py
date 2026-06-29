@@ -262,7 +262,11 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        if not self.is_compact():
+            raise ValueError("The ndarray is not compact.")
+        if math.prod(self._shape) != math.prod(new_shape):
+            raise ValueError("The product of current shape is not equal to the product of the new shape.")
+        return self.make(new_shape, device=self._device, handle=self._handle)
         ### END YOUR SOLUTION
 
     def permute(self, new_axes: tuple[int, ...]) -> "NDArray":
@@ -287,7 +291,18 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape = [0] * len(new_axes)
+        for i in range(len(new_axes)):
+            new_shape[i] = self._shape[new_axes[i]]
+        pos = [0] * len(new_axes)
+        for i in range(len(new_axes)):
+            pos[new_axes[i]] = i
+        new_strides = [0] * len(new_shape)
+        for i in range(len(new_axes)):
+            new_strides[pos[i]] = self._strides[i]
+
+        return self.make(tuple(new_shape), tuple(new_strides), self._device, self._handle)
+
         ### END YOUR SOLUTION
 
     def broadcast_to(self, new_shape: tuple[int, ...]) -> "NDArray":
@@ -311,7 +326,14 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        length = len(self._shape)
+        assert len(new_shape) == length, "new_shape length is not equal to origin shape length."
+        new_strides = list(self._strides)
+        for i in range(length):
+            if new_shape[i] != self._shape[i]:
+                assert self.shape[i] == 1, "Can not broadcast the dimension which is not equal to 1."
+                new_strides[i] = 0
+        return self.make(new_shape, tuple(new_strides), self._device, self._handle)
         ### END YOUR SOLUTION]
 
     ### Get and set elements
