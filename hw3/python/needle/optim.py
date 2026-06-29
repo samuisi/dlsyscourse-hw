@@ -25,12 +25,19 @@ class SGD(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        for param in self.params:
+            param_id = id(param)
+            grad = ndl.Tensor(
+                    param.grad.cached_data + self.weight_decay * param.data.cached_data,
+                    dtype=param.dtype)
+            self.u[param_id] = self.momentum * self.u.get(param_id, 0) + (1-self.momentum) * grad
+            param.data = param.data - self.lr * self.u[param_id]
         ### END YOUR SOLUTION
 
     def clip_grad_norm(self, max_norm=0.25):
         """
         Clips gradient norm of parameters.
+        Note: This does not need to be implemented for HW2 and can be skipped.
         """
         ### BEGIN YOUR SOLUTION
         raise NotImplementedError()
@@ -60,5 +67,17 @@ class Adam(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.t += 1
+        for param in self.params:
+            param_id = id(param)
+            grad = ndl.Tensor(
+                    param.grad.cached_data + self.weight_decay * param.data.cached_data,
+                    dtype=param.dtype)
+            self.m[param_id] = (self.beta1 * self.m.get(param_id, 0) + (1-self.beta1) * grad).data
+            self.v[param_id] = (self.beta2 * self.v.get(param_id, 0) + (1-self.beta2) * ((grad.data) ** 2)).data
+            u_hat = self.m[param_id] / (1 - (self.beta1 ** self.t))
+            v_hat = self.v[param_id] / (1 - (self.beta2 ** self.t))
+
+            param.data = param.data - self.lr * u_hat / (v_hat ** 0.5 + self.eps)
+
         ### END YOUR SOLUTION
