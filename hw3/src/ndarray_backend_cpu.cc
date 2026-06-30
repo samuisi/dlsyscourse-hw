@@ -5,6 +5,7 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 namespace needle {
 namespace cpu {
@@ -43,7 +44,16 @@ void Fill(AlignedArray* out, scalar_t val) {
   }
 }
 
-
+void DfsForCompact(const AlignedArray& a, AlignedArray* out, const std::vector<int32_t>& shape,
+                   const std::vector<int32_t>& strides, int offset, int dim, int& write_pos) {
+  if (shape.size() == dim) {
+    out->ptr[write_pos++] = a.ptr[offset];
+    return;
+  }
+  for (int i = 0; i < shape[dim]; i++) {
+    DfsForCompact(a, out, shape, strides, offset + strides[dim] * i, dim+1, write_pos);
+  }
+}
 
 void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shape,
              std::vector<int32_t> strides, size_t offset) {
@@ -62,8 +72,20 @@ void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shap
    *  function will implement here, so we won't repeat this note.)
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  int write_pos = 0;
+  DfsForCompact(a, out, shape, strides, offset, 0, write_pos);
   /// END SOLUTION
+}
+
+void DfsForEwiseSetitem(const AlignedArray& a, AlignedArray* out, const std::vector<int32_t>& shape,
+                        const std::vector<int32_t>& strides, size_t offset, int dim, int& read_pos) {
+  if (shape.size() == dim) {
+    out->ptr[offset] = a.ptr[read_pos++];
+    return;
+  }
+  for (int i = 0; i < shape[dim]; i++) {
+    DfsForEwiseSetitem(a, out, shape, strides, offset + i * strides[dim], dim+1, read_pos);
+  }
 }
 
 void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shape,
@@ -79,8 +101,20 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t>
    *   offset: offset of the *out* array (not a, which has zero offset, being compact)
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  int read_pos = 0;
+  DfsForEwiseSetitem(a, out, shape, strides, offset, 0, read_pos);
   /// END SOLUTION
+}
+
+void DfsForScalarSetitem(scalar_t val, AlignedArray* out, const std::vector<int32_t>& shape,
+                         const std::vector<int32_t>& strides, size_t offset, int dim) {
+  if (shape.size() == dim) {
+    out->ptr[offset] = val;
+    return;
+  }
+  for (int i = 0; i < shape[dim]; i++) {
+    DfsForScalarSetitem(val, out, shape, strides, offset + i * strides[dim], dim+1);
+  }
 }
 
 void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vector<int32_t> shape,
@@ -100,7 +134,7 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vect
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  DfsForScalarSetitem(val, out, shape, strides, offset, 0);
   /// END SOLUTION
 }
 
