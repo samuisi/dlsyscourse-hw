@@ -1,3 +1,4 @@
+import builtins
 import math
 import operator
 from functools import reduce
@@ -400,7 +401,10 @@ class NDArray:
         assert len(slices) == self.ndim, "Need indexes equal to number of dimensions"
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape = [(sli.stop - sli.start + sli.step - 1) // sli.step for sli in slices]
+        new_strides = [stride * slices[i].step for i, stride in enumerate(self._strides)]
+        offset = self._offset + builtins.sum([(sli.start * self._strides[i]) for i, sli in enumerate(slices)])
+        return self.make(tuple(new_shape), tuple(new_strides), self._device, self._handle, offset)
         ### END YOUR SOLUTION
 
     def __setitem__(self, idxs: int | slice | tuple[int | slice, ...], other: Union["NDArray", float]) -> None:
