@@ -272,7 +272,7 @@ void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out, uin
     for (int j = 0; j < p; j++) {
       auto& sum = out->ptr[i * p + j];
       sum = 0;
-      for (int k = 0; k < p; k++)
+      for (int k = 0; k < n; k++)
         sum += a.ptr[i*n+k] * b.ptr[k*p+j];
     }
   }
@@ -335,39 +335,18 @@ void MatmulTiled(const AlignedArray& a, const AlignedArray& b, AlignedArray* out
    */
   /// BEGIN SOLUTION
 
-  // strides_a: (n * TILE, TILE^2, TILE, 1)
-  // strides_b: (p * TILE, TILE^2, TILE, 1)
-  // strides_o: (p * TILE, TILE^2, TILE, 1)
-  std::vector<uint32_t> strides_a{ n * TILE, TILE * TILE, TILE, 1 };
-  std::vector<uint32_t> strides_bo{ p * TILE, TILE * TILE, TILE, 1 };
-  auto access = [](const AlignedArray& arr, const std::vector<uint32_t>& strides, const std::vector<size_t>& indices) -> scalar_t& {
-    uint32_t id = 0;
-    for (int i = 0; i < strides.size(); i++)
-      id += strides[i] * indices[i];
-    return arr.ptr[id];
-  };
-
-  constexpr size_t tile2 = TILE * TILE;
-  for (size_t tile_r = 0; tile_r < m/TILE; tile_r++) {
-    for (size_t tile_c = 0; tile_c < p/TILE; tile_c++) {
-      std::vector<float> tile_o(tile2);
-      for (size_t tile_k = 0; tile_k < n/TILE; tile_k++) {
-        // calc tile[r, k] x tile[k, c]
-        std::vector<float> tile_a(tile2), tile_b(tile2);
-        for (size_t r = 0; r < TILE; r++) {
-          for (size_t c = 0; c < TILE; c++) {
-            tile_a[r*TILE+c] = access(a, strides_a, {tile_r, tile_k, r, c});
-            tile_b[r*TILE+c] = access(b, strides_bo, {tile_k, tile_c, r, c});
-          }
-        }
-        AlignedDot(tile_a.data(), tile_b.data(), tile_o.data());
+  // a   strides: (n * TILE, TILE^2, TILE, 1)
+  // a   strides: (p * TILE, TILE^2, TILE, 1)
+  // out strides: (p * TILE, TILE^2, TILE, 1)
+  std::fill(out->ptr, out->ptr + out->size, 0.0f);
+  for (size_t tile_r = 0; tile_r < m / TILE; tile_r++) {
+    for (size_t tile_c = 0; tile_c < p / TILE; tile_c++) {
+      float* ptr_out = out->ptr + tile_r * (p * TILE) + tile_c * (TILE * TILE);
+      for (size_t tile_k = 0; tile_k < n / TILE; tile_k++) {
+        const float* ptr_a = a.ptr + tile_r * (n * TILE) + tile_k * (TILE * TILE);
+        const float* ptr_b = b.ptr + tile_k * (p * TILE) + tile_c * (TILE * TILE);
+        AlignedDot(ptr_a, ptr_b, ptr_out);
       }
-      // write tile_o to out array
-      for (size_t r = 0; r < TILE; r++)
-        for (size_t c = 0; c < TILE; c++) {
-          auto& res = access(*out, strides_bo, {tile_r, tile_c, r, c});
-          res = tile_o[r*TILE+c];
-        }
     }
   }
   /// END SOLUTION
